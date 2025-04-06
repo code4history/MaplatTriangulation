@@ -5,11 +5,20 @@ export interface Point {
   y: number;
 }
 
-export function generateDelaunay(points: Point[]) {
-  const coords = points.map(p => [p.x, p.y]);
-  const delaunay = Delaunator.from(coords);
+export interface TriangulationResult {
+  triangles: number[][];
+  pointsA: Point[];
+  pointsB: Point[];
+}
 
-  // 三角形のインデックス情報を整理
+export function generateTriangulation(pointsA: Point[], pointsB: Point[]): TriangulationResult {
+  if (pointsA.length !== pointsB.length) {
+    throw new Error('対応点の数が異なります。');
+  }
+
+  const coordsA = pointsA.map(p => [p.x, p.y]);
+  const delaunay = Delaunator.from(coordsA);
+
   const triangles: number[][] = [];
   for (let i = 0; i < delaunay.triangles.length; i += 3) {
     triangles.push([
@@ -19,5 +28,9 @@ export function generateDelaunay(points: Point[]) {
     ]);
   }
 
-  return triangles;
+  return {
+    triangles,
+    pointsA,
+    pointsB
+  };
 }
