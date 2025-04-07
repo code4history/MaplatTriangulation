@@ -1,14 +1,15 @@
 {
   "name": "@maplat/triangulation",
   "private": true,
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "test": "vitest",
     "preview": "vite preview",
-    "generate:test-data": "ts-node scripts/generateTestData.ts"
+    "generate:test-data": "ts-node scripts/generateTestData.ts",
+    "start:visualizer": "vite"
   },
   "devDependencies": {
     "@types/delaunator": "^5.0.3",
