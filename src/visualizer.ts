@@ -7,6 +7,29 @@ const canvasB = document.getElementById('canvasB') as HTMLCanvasElement;
 const ctxA = canvasA.getContext('2d')!;
 const ctxB = canvasB.getContext('2d')!;
 
+// 3. Canvasのサイズを表示サイズに揃える関数
+function resizeCanvas(canvas: HTMLCanvasElement) {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+}
+
+// 4. サイズ調整して可視化を更新する関数
+function resizeCanvasesAndUpdate() {
+  resizeCanvas(canvasA);
+  resizeCanvas(canvasB);
+  updateVisualization();
+}
+
+// 5. Canvasを初期化するために明示的に一度実行
+resizeCanvasesAndUpdate();
+
+// 6. ウィンドウサイズ変更時にも再実行
+window.addEventListener('resize', resizeCanvasesAndUpdate);
+
+// Canvasの内部サイズと表示サイズをログ出力
+console.log('CanvasA:', canvasA.width, canvasA.height, canvasA.clientWidth, canvasA.clientHeight);
+console.log('CanvasB:', canvasB.width, canvasB.height, canvasB.clientWidth, canvasB.clientHeight);
+
 // コントロール要素
 const pointCountInput = document.getElementById('pointCount') as HTMLInputElement;
 const generateBtn = document.getElementById('generateBtn') as HTMLButtonElement;
@@ -179,6 +202,12 @@ function updateVisualization() {
   // キャンバスクリア
   clearCanvases();
   
+  // データが無ければスキップ
+  if (pointsB.length === 0) {
+    console.warn('描画データが無いため可視化をスキップ');
+    return;
+  }
+
   // 座標変換用のスケールを計算
   calculateScales();
   
@@ -206,17 +235,27 @@ function clearCanvases() {
   ctxB.clearRect(0, 0, canvasB.width, canvasB.height);
 }
 
-// 座標変換用のスケール計算
+// デバッグのための修正版calculateScales（ログ出力付き）
 function calculateScales() {
-  // 平面Aは0〜10000の範囲
+  console.log('calculateScales 開始');
+
+  // 平面Aのスケール
   aToCanvasScale = canvasA.width / 10000;
-  
-  // 平面Bの範囲を計算
+  console.log(`aToCanvasScale: ${aToCanvasScale}`);
+
+  // pointsBが空の場合は処理をスキップ
+  if (pointsB.length === 0) {
+    console.warn('pointsBが空なのでスケール計算をスキップします。');
+    return;
+  }
+
+  // 平面Bの範囲計算
   bMinX = Math.min(...pointsB.map(p => p.x));
   bMinY = Math.min(...pointsB.map(p => p.y));
   bMaxX = Math.max(...pointsB.map(p => p.x));
   bMaxY = Math.max(...pointsB.map(p => p.y));
-  
+  console.log(`計算直後のB範囲: bMinX=${bMinX}, bMinY=${bMinY}, bMaxX=${bMaxX}, bMaxY=${bMaxY}`);
+
   // 余白を追加（5%）
   const bRangeX = bMaxX - bMinX;
   const bRangeY = bMaxY - bMinY;
@@ -224,10 +263,14 @@ function calculateScales() {
   bMinY -= bRangeY * 0.05;
   bMaxX += bRangeX * 0.05;
   bMaxY += bRangeY * 0.05;
-  
-  // 正方形にするための調整
+  console.log(`余白追加後のB範囲: bMinX=${bMinX}, bMinY=${bMinY}, bMaxX=${bMaxX}, bMaxY=${bMaxY}`);
+
+  // 正方形調整
   const bRange = Math.max(bMaxX - bMinX, bMaxY - bMinY);
   bToCanvasScale = canvasB.width / bRange;
+  console.log(`bToCanvasScale: ${bToCanvasScale}, bRange=${bRange}`);
+
+  console.log('calculateScales 完了');
 }
 
 // 点群の描画
