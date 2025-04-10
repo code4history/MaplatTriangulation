@@ -5,20 +5,46 @@
   import { generatePoints } from './utils/pointUtils';
   import type { PointPair } from './types';
 
-  let points = $state<PointPair[]>(generatePoints(500));
+  let pointPairs = $state<PointPair[]>(generatePoints(500));
+  let triangles = $state<number[][]>([]);
+  let isTriangulationShown = $state(false);
 
   function handleGenerate(event: CustomEvent<{ pointCount: number }>) {
-    points = generatePoints(event.detail.pointCount);
+    pointPairs = generatePoints(event.detail.pointCount);
+    triangles = [];
+    isTriangulationShown = false;
   }
 
   function handleUpdate(event: CustomEvent<PointPair[]>) {
-    points = event.detail;
+    pointPairs = event.detail;
+    triangles = [];
+    isTriangulationShown = false;
+  }
+
+  async function toggleTriangulation() {
+    if (!isTriangulationShown) {
+      const { generateTriangulation } = await import('../../src/triangulation');
+      const pointsA = pointPairs.map(p => p.a);
+      const pointsB = pointPairs.map(p => p.b);
+      const result = generateTriangulation(pointsA, pointsB);
+      triangles = result.triangles;
+      isTriangulationShown = true;
+    } else {
+      triangles = [];
+      isTriangulationShown = false;
+    }
   }
 </script>
 
-<main>
-  <h1>三角網テストUI（JSON連動）</h1>
-  <CanvasPair {points} />
-  <ControlForm on:generate={handleGenerate} initialCount={500} />
-  <PointDataEditor {points} on:update={handleUpdate} />
-</main>
+<button onclick={toggleTriangulation}>
+  三角網を {isTriangulationShown ? '非表示にする' : '表示する'}
+</button>
+
+<CanvasPair
+  {pointPairs}
+  {triangles}
+  {isTriangulationShown}
+/>
+
+<ControlForm on:generate={handleGenerate} initialCount={500} />
+<PointDataEditor points={pointPairs} on:update={handleUpdate} />
