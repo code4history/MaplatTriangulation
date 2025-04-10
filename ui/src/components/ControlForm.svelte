@@ -1,21 +1,26 @@
-<script lang="ts"></script>
+<script lang="ts">
+  import { createEventDispatcher } from 'svelte';
 
-<form>
-  <fieldset>
-    <legend>設定</legend>
-    <label>
-      点数（未実装）:
-      <input type="number" disabled placeholder="例: 500" />
-    </label>
-  </fieldset>
-</form>
+  const dispatch = createEventDispatcher();
+
+  export let initialCount: number = 500;
+  let pointCount: number = initialCount;
+
+  function generatePoints() {
+    dispatch('generate', { pointCount });
+  }
+</script>
+
+<div class="control-form">
+  点数: <input type="number" bind:value={pointCount} min="1" />
+  <button on:click={generatePoints}>点群生成</button>
+</div>
 
 <style>
-  form {
-    margin-top: 1em;
-  }
-  fieldset {
-    border: 1px solid #ccc;
-    padding: 1em;
-  }
+.control-form {
+  margin-top: 1em;
+}
+input {
+  width: 80px;
+}
 </style>
