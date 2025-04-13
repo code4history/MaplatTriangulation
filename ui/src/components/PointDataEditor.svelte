@@ -1,30 +1,19 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  import type { PointPair } from '../types';
+  const props = $props<{
+    jsonText: string;
+    onJsonChange: (newJson: string) => void;
+  }>();
 
-  export let points: PointPair[] = [];
+  let localJson = $state(props.jsonText);
 
-  const dispatch = createEventDispatcher();
-  let jsonText: string = JSON.stringify(points, null, 2);
+  // 親からpropsが変化したらローカル状態に同期
+  $effect(() => {
+    localJson = props.jsonText;
+  });
 
-  // JSONが更新されたら親に通知
-  function handleJsonInput() {
-    try {
-      const parsed = JSON.parse(jsonText);
-      dispatch('update', parsed);
-    } catch (error) {
-      // エラーは無視
-    }
+  function handleInput() {
+    props.onJsonChange(localJson);
   }
-
-  $: jsonText = JSON.stringify(points, null, 2);
 </script>
 
-<textarea bind:value={jsonText} on:input={handleJsonInput} rows="15" cols="80"></textarea>
-
-<style>
-textarea {
-  width: 100%;
-  font-family: monospace;
-}
-</style>
+<textarea rows="20" cols="50" bind:value={localJson} oninput={handleInput}></textarea>

@@ -1,7 +1,5 @@
 <script lang="ts">
   import CanvasPair from './components/CanvasPair.svelte';
-  import ControlForm from './components/ControlForm.svelte';
-  import PointDataEditor from './components/PointDataEditor.svelte';
   import { generatePoints } from './utils/pointUtils';
   import type { PointPair } from './types';
 
@@ -45,6 +43,3 @@
   {triangles}
   {isTriangulationShown}
 />
-
-<ControlForm on:generate={handleGenerate} initialCount={500} />
-<PointDataEditor points={pointPairs} on:update={handleUpdate} />
