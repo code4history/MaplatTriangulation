@@ -34,10 +34,6 @@
   }
 </script>
 
-<button onclick={toggleTriangulation}>
-  三角網を {isTriangulationShown ? '非表示にする' : '表示する'}
-</button>
-
 <CanvasPair
   {pointPairs}
   {triangles}
