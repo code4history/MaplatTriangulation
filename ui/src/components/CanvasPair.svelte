@@ -1,116 +1,122 @@
 <script lang="ts">
   import Canvas from './Canvas.svelte';
+  import OLCanvas from './OLCanvas.svelte';
   import PointDataEditor from './PointDataEditor.svelte';
+  import ControlForm from './ControlForm.svelte';
   import { generatePoints } from '../utils/pointUtils';
-  import type { PointPair, Point } from '../types';
+  import { generateTriangulation } from '../../../src/triangulation';
 
-  const props = $props<{
-    pointPairs: PointPair[];
-    triangles: number[][] | null;
-    isTriangulationShown: boolean;
-  }>();
-
-  let pointPairs = $state<PointPair[]>(props.pointPairs);
-  let triangles = $state<number[][] | null>(props.triangles);
-  let isTriangulationShown = $state<boolean>(props.isTriangulationShown);
+  let pointPairs = $state(generatePoints(500));
+  let triangles = $state<number[][] | null>(null);
   let selectedIndex = $state<number | null>(null);
-  let newPointCount = $state(500);
+  let isTriangulationShown = $state(false);
 
-  // JSONの内容を三角網の表示状態に応じて切り替え
-  let jsonText = $derived(() => {
-    if (isTriangulationShown && triangles) {
-      return JSON.stringify({
-        triangles,
-        pointsA: pointPairs.map(p => p.a),
-        pointsB: pointPairs.map(p => p.b),
-      }, null, 2);
-    } else {
-      return JSON.stringify(pointPairs, null, 2);
-    }
-  });
+  // 点群再生成
+  const handleGenerate = (detail: { pointCount: number }) => {
+    pointPairs = generatePoints(detail.pointCount);
+    triangles = null;
+    isTriangulationShown = false;
+  };
 
-  function handleJsonChange(newJson: string) {
+  // JSONからのデータ更新
+  const handleJsonChange = (detail: string) => {
     try {
-      const parsed = JSON.parse(newJson);
-      if (Array.isArray(parsed)) {
+      const parsed = JSON.parse(detail);
+
+      if (parsed.pointsA && parsed.pointsB) {
+        // JSONがpointsAとpointsBを持つ形式の場合
+        pointPairs = parsed.pointsA.map((pointA, index) => ({
+          a: pointA,
+          b: parsed.pointsB[index]
+        }));
+      } else if (Array.isArray(parsed)) {
+        // 単純な配列の場合（従来のpointPairs形式）
         pointPairs = parsed;
+      } else {
+        throw new Error('Invalid JSON structure');
       }
-    } catch (error) {
-      console.error('Invalid JSON:', error);
+
+      triangles = (parsed.triangles && parsed.triangles.length > 0) ? parsed.triangles : null;
+      isTriangulationShown = triangles !== null; 
+
+    } catch (e) {
+      console.error('JSON parse error:', e);
+      alert('JSONの形式が不正です。コンソールを確認してください。');
     }
-  }
+  };
 
-  function handlePointSelect(index: number | null) {
-    selectedIndex = index;
-  }
+  // 点選択処理
+  const handlePointSelect = (detail: number | null) => {
+    selectedIndex = detail;
+  };
 
-  function handlePointMoveA({ index, point }: { index: number; point: Point }) {
-    pointPairs[index] = { ...pointPairs[index], a: point };
-  }
+  // 点移動処理
+  const handlePointMove = (detail: { index: number; point: { x: number; y: number } }, plane: 'a' | 'b') => {
+    pointPairs[detail.index][plane] = detail.point;
+    pointPairs = [...pointPairs];
+  };
 
-  function handlePointMoveB({ index, point }: { index: number; point: Point }) {
-    pointPairs[index] = { ...pointPairs[index], b: point };
-  }
-
-  function regeneratePoints() {
-    pointPairs = generatePoints(newPointCount);
-    triangles = [];
-    isTriangulationShown = false;
-    selectedIndex = null;
-  }
-
-// CanvasPair.svelte内の三角網トグル処理を修正
-async function toggleTriangulation() {
-  if (!isTriangulationShown) {
-    const { generateTriangulation } = await import('../../../src/triangulation');
-    const pointsA = pointPairs.map(p => p.a);
-    const pointsB = pointPairs.map(p => p.b);
-    const result = generateTriangulation(pointsA, pointsB);
-    
-    // 🔸デバッグ用console.logを追加
-    console.log('三角網が生成されました:', result.triangles);
-
-    triangles = result.triangles;
-    isTriangulationShown = true;
-  } else {
-    triangles = [];
-    isTriangulationShown = false;
-
-    // 🔸デバッグ用console.logを追加（非表示時の確認用）
-    console.log('三角網が非表示になりました');
-  }
-}
+  // 三角網トグル
+  const toggleTriangulation = () => {
+    if (!isTriangulationShown) {
+      const result = generateTriangulation(
+        pointPairs.map(p => p.a),
+        pointPairs.map(p => p.b)
+      );
+      triangles = result.triangles;
+      isTriangulationShown = true;
+    } else {
+      triangles = null;
+      isTriangulationShown = false;
+    }
+  };
 </script>
 
-<div style="margin-bottom:1rem;">
-  <input type="number" bind:value={newPointCount} min="1" style="width:100px; margin-right:8px;">
-  <button onclick={regeneratePoints}>
-    新しい点群を生成（{newPointCount}点）
+<div style="display: flex; flex-direction: column; gap: 1rem;">
+  <ControlForm generate={handleGenerate} initialCount={500} />
+
+  <button onclick={toggleTriangulation}>
+    三角網を {isTriangulationShown ? '非表示にする' : '表示する'}
   </button>
-  <button onclick={toggleTriangulation} style="margin-left:8px;">
-    三角網を{isTriangulationShown ? '非表示にする' : '表示する'}
-  </button>
-</div>
 
-<div style="display:flex; gap:1rem;">
-  <Canvas
-    points={pointPairs.map(p => p.a)}
-    triangles={isTriangulationShown ? triangles : null}
-    selectedIndex={selectedIndex}
-    onPointSelect={handlePointSelect}
-    onPointMove={handlePointMoveA}
+  <div style="display: flex; gap: 1rem;">
+    <Canvas
+      points={pointPairs.map(p => p.a)}
+      triangles={triangles}
+      selectedIndex={selectedIndex}
+      pointselect={handlePointSelect}
+      pointmove={(detail) => handlePointMove(detail, 'a')}
+    />
+    <Canvas
+      points={pointPairs.map(p => p.b)}
+      triangles={triangles}
+      selectedIndex={selectedIndex}
+      pointselect={handlePointSelect}
+      pointmove={(detail) => handlePointMove(detail, 'b')}
+    />
+  </div>
+
+  <div style="display: flex; gap: 1rem;">
+    <OLCanvas
+      points={pointPairs.map(p => p.a)}
+      triangles={triangles}
+      selectedIndex={selectedIndex}
+      mapId="mapA"
+    />
+    <OLCanvas
+      points={pointPairs.map(p => p.b)}
+      triangles={triangles}
+      selectedIndex={selectedIndex}
+      mapId="mapB"
+    />
+  </div>
+
+  <PointDataEditor
+    jsonText={JSON.stringify({
+      pointsA: pointPairs.map(p => p.a),
+      pointsB: pointPairs.map(p => p.b),
+      triangles: triangles || []
+    }, null, 2)}
+    jsonchange={handleJsonChange}
   />
-
-  <Canvas
-    points={pointPairs.map(p => p.b)}
-    triangles={isTriangulationShown ? triangles : null}
-    selectedIndex={selectedIndex}
-    onPointSelect={handlePointSelect}
-    onPointMove={handlePointMoveB}
-  />
 </div>
-
-<PointDataEditor
-  jsonText={jsonText()}
-  onJsonChange={handleJsonChange}
-/>

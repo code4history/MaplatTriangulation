@@ -1,12 +1,12 @@
 <script lang="ts">
   import type { Point } from '../types';
 
-  const props = $props<{
-    points: Point[];
-    triangles: number[][] | null;
-    selectedIndex: number | null;
-    onPointSelect: (index: number | null) => void;
-    onPointMove: (detail: { index: number; point: Point }) => void;
+  const { points, triangles, selectedIndex, pointselect, pointmove } = $props<{
+    points: { x: number; y: number }[];
+    triangles?: number[][] | null;
+    selectedIndex?: number | null;
+    pointselect?: (index: number | null) => void;
+    pointmove?: (detail: { index: number; point: { x: number; y: number } }) => void;
   }>();
 
   let canvas: HTMLCanvasElement;
@@ -33,7 +33,7 @@
   let normPoints: { x: number; y: number }[] = [];
 
   function updateCanvas() {
-    normPoints = normalizePoints(props.points);
+    normPoints = normalizePoints(points);
     draw();
     console.log('Canvas updated:', normPoints);
   }
@@ -43,9 +43,9 @@
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (props.triangles) {
+    if (triangles) {
       ctx.strokeStyle = 'black';
-      props.triangles.forEach(([i1, i2, i3]) => {
+      triangles.forEach(([i1, i2, i3]) => {
         ctx.beginPath();
         ctx.moveTo(normPoints[i1].x * canvas.width, normPoints[i1].y * canvas.height);
         ctx.lineTo(normPoints[i2].x * canvas.width, normPoints[i2].y * canvas.height);
@@ -56,7 +56,7 @@
     }
 
     normPoints.forEach(({ x, y }, idx) => {
-      ctx.fillStyle = idx === props.selectedIndex ? 'red' : 'blue';
+      ctx.fillStyle = idx === selectedIndex ? 'red' : 'blue';
       ctx.beginPath();
       ctx.arc(x * canvas.width, y * canvas.height, POINT_SIZE / 2, 0, Math.PI * 2);
       ctx.fill();
@@ -78,10 +78,10 @@
     console.log('MouseDown fired. DragIdx:', dragIdx);
 
     if (dragIdx !== -1) {
-      props.onPointSelect(dragIdx);
+      pointselect?.(dragIdx);
       console.log('Point selected:', dragIdx);
-      if (!props.triangles) {
-        dragging = true; // 三角網表示中は移動を許可しない
+      if (!triangles || triangles.length === 0) {
+        dragging = true;
         console.log('Dragging enabled.');
       } else {
         dragging = false;
@@ -89,7 +89,7 @@
       }
       draw();
     } else {
-      props.onPointSelect(null);
+      pointselect?.(null);
       console.log('Selection cleared');
       draw();
     }
@@ -101,8 +101,8 @@
 
     const { mouseX, mouseY } = getMousePosition(e);
 
-    const xs = props.points.map(p => p.x);
-    const ys = props.points.map(p => p.y);
+    const xs = points.map(p => p.x);
+    const ys = points.map(p => p.y);
     const minX = Math.min(...xs), maxX = Math.max(...xs);
     const minY = Math.min(...ys), maxY = Math.max(...ys);
     const width = maxX - minX, height = maxY - minY;
@@ -112,7 +112,7 @@
     const realX = minX - (maxSize - width)/2 - margin + mouseX * (maxSize + margin*2);
     const realY = minY - (maxSize - height)/2 - margin + mouseY * (maxSize + margin*2);
 
-    props.onPointMove({ index: dragIdx, point: { x: realX, y: realY } });
+    pointmove?.({ index: dragIdx, point: { x: realX, y: realY } });
     console.log('Point moved:', dragIdx, realX, realY);
   }
 
@@ -129,3 +129,12 @@
   onmousemove={handleMouseMove}
   onmouseup={handleMouseUp}>
 </canvas>
+
+<style>
+  canvas {
+    width: 400px;
+    height: 400px;
+    border: 1px solid #000;
+    box-sizing: border-box;
+  }
+</style>

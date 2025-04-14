@@ -1,19 +1,20 @@
 <script lang="ts">
-  const props = $props<{
+  const { jsonText, jsonchange } = $props<{
     jsonText: string;
-    onJsonChange: (newJson: string) => void;
+    jsonchange?: (detail: string) => void;
   }>();
 
-  let localJson = $state(props.jsonText);
+  let localJson = $state(jsonText);
 
   // 親からpropsが変化したらローカル状態に同期
   $effect(() => {
-    localJson = props.jsonText;
+    localJson = jsonText;
   });
 
-  function handleInput() {
-    props.onJsonChange(localJson);
-  }
+  const handleInput = (event: Event) => {
+    const newJson = (event.target as HTMLTextAreaElement).value;
+    jsonchange?.(newJson);
+  };
 </script>
 
 <textarea rows="20" cols="50" bind:value={localJson} oninput={handleInput}></textarea>
