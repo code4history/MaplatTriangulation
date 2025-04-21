@@ -1,9 +1,7 @@
 import Delaunator from 'delaunator';
 
-export interface Point {
-  x: number;
-  y: number;
-}
+/** 内部表現はタプルに統一 */
+export type Point = [number, number];
 
 export interface TriangulationResult {
   triangles: number[][];
@@ -11,13 +9,16 @@ export interface TriangulationResult {
   pointsB: Point[];
 }
 
+/**
+ * 2 平面対応を後工程で扱う前段フェーズ：
+ * まだ必須／禁止制約を入れる前のプレーンな Delaunay 生成
+ */
 export function generateTriangulation(pointsA: Point[], pointsB: Point[]): TriangulationResult {
   if (pointsA.length !== pointsB.length) {
     throw new Error('対応点の数が異なります。');
   }
 
-  const coordsA = pointsA.map(p => [p.x, p.y]);
-  const delaunay = Delaunator.from(coordsA);
+  const delaunay = Delaunator.from(pointsA);
 
   const triangles: number[][] = [];
   for (let i = 0; i < delaunay.triangles.length; i += 3) {
@@ -28,9 +29,5 @@ export function generateTriangulation(pointsA: Point[], pointsB: Point[]): Trian
     ]);
   }
 
-  return {
-    triangles,
-    pointsA,
-    pointsB
-  };
+  return { triangles, pointsA, pointsB };
 }

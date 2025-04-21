@@ -102,12 +102,16 @@
       triangles={triangles}
       selectedIndex={selectedIndex}
       mapId="mapA"
+      pointselect={handlePointSelect}
+      pointmove={(detail) => handlePointMove(detail, 'a')}
     />
     <OLCanvas
       points={pointPairs.map(p => p.b)}
       triangles={triangles}
       selectedIndex={selectedIndex}
       mapId="mapB"
+      pointselect={handlePointSelect}
+      pointmove={(detail) => handlePointMove(detail, 'b')}
     />
   </div>
 

@@ -1,0 +1,187 @@
+# merge-prep full patch (unified diff, --unidiff-zero)
+# 保存例: part1.patch  (この 1 ファイルのみです)
+# 適用:  git checkout -b merge-prep
+#         git apply --unidiff-zero part1.patch
+#         npm i && npm run test
+# --------------------------------------------------
+diff --git a/src/triangulation.ts b/src/triangulation.ts
+index 3f1e1c4..a6bced1 100644
+--- a/src/triangulation.ts
++++ b/src/triangulation.ts
+@@ -1,9 +1,7 @@
+-import Delaunator from 'delaunator';
+-
+-export interface Point {
+-  x: number;
+-  y: number;
+-}
++import Delaunator from 'delaunator';
++
++export type Point = [number, number];
+@@
+-  const coordsA = pointsA.map(p => [p.x, p.y]);
++  const coordsA = pointsA;
+@@
+-  return {
+-    triangles,
+-    pointsA,
+-    pointsB
+-  };
++  return { triangles, pointsA, pointsB };
+ }
+
+diff --git a/src/topology.ts b/src/topology.ts
+index 712ab03..4f0b3b5 100644
+--- a/src/topology.ts
++++ b/src/topology.ts
+@@ -8,12 +8,12 @@
+-import { TriangulationResult, Point } from './triangulation';
++import { TriangulationResult, Point } from './triangulation';
+@@
+-function createTypedPoints(points: Point[]): Float64Array {
+-  const coords = new Float64Array(points.length * 2);
+-  points.forEach((p, i) => {
+-    coords[i * 2] = p.x;
+-    coords[i * 2 + 1] = p.y;
+-  });
+-  return coords;
+-}
++function createTypedPoints(points: Point[]): Float64Array {
++  const coords = new Float64Array(points.length * 2);
++  points.forEach((p, i) => {
++    coords[i * 2] = p[0];
++    coords[i * 2 + 1] = p[1];
++  });
++  return coords;
++}
+
+diff --git a/src/core/geometry.ts b/src/core/geometry.ts
+new file mode 100644
+--- /dev/null
++++ b/src/core/geometry.ts
+@@
++/**
++ * 2 本の線分 (a1‑b1, a2‑b2) が交差するかを判定
++ */
++export function segmentsIntersect(
++  a1: [number, number], b1: [number, number],
++  a2: [number, number], b2: [number, number]
++): boolean {
++  const orient = (p: [number, number], q: [number, number], r: [number, number]) =>
++    (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
++
++  const o1 = orient(a1, b1, a2);
++  const o2 = orient(a1, b1, b2);
++  const o3 = orient(a2, b2, a1);
++  const o4 = orient(a2, b2, b1);
++
++  if (o1 === 0 && onSeg(a1, a2, b1)) return true;
++  if (o2 === 0 && onSeg(a1, b2, b1)) return true;
++  if (o3 === 0 && onSeg(a2, a1, b2)) return true;
++  if (o4 === 0 && onSeg(a2, b1, b2)) return true;
++
++  return (o1 > 0) !== (o2 > 0) && (o3 > 0) !== (o4 > 0);
++}
++
++function onSeg(p: [number, number], q: [number, number], r: [number, number]): boolean {
++  return (
++    Math.min(p[0], r[0]) <= q[0] && q[0] <= Math.max(p[0], r[0]) &&
++    Math.min(p[1], r[1]) <= q[1] && q[1] <= Math.max(p[1], r[1])
++  );
++}
+
+diff --git a/src/core/edgeOps.ts b/src/core/edgeOps.ts
+new file mode 100644
+--- /dev/null
++++ b/src/core/edgeOps.ts
+@@
++export function hasEdge(tris: Uint32Array, u: number, v: number): boolean {
++  for (let i = 0; i < tris.length; i += 3) {
++    const a = tris[i], b = tris[i + 1], c = tris[i + 2];
++    if (
++      (a === u && b === v) || (a === v && b === u) ||
++      (b === u && c === v) || (b === v && c === u) ||
++      (c === u && a === v) || (c === v && a === u)
++    ) return true;
++  }
++  return false;
++}
++
++export function flipEdge(tris: Uint32Array, u: number, v: number): boolean {
++  let off1 = -1, off2 = -1;
++  for (let i = 0; i < tris.length; i += 3) {
++    const a = tris[i], b = tris[i + 1], c = tris[i + 2];
++    if ([a, b, c].includes(u) && [a, b, c].includes(v)) {
++      if (off1 < 0) off1 = i; else { off2 = i; break; }
++    }
++  }
++  if (off1 < 0 || off2 < 0) return false;
++
++  const opp1 = Array.from(tris.slice(off1, off1 + 3)).find(x => x !== u && x !== v)!;
++  const opp2 = Array.from(tris.slice(off2, off2 + 3)).find(x => x !== u && x !== v)!;
++
++  tris[off1] = opp1; tris[off1 + 1] = u; tris[off1 + 2] = opp2;
++  tris[off2] = opp1; tris[off2 + 1] = opp2; tris[off2 + 2] = v;
++  return true;
++}
+
+diff --git a/src/core/convexHull.ts b/src/core/convexHull.ts
+new file mode 100644
+--- /dev/null
++++ b/src/core/convexHull.ts
+@@
++export function computeConvexHull(pts: [number, number][]): number[] {
++  const idx = pts.map((_, i) => i).sort((i, j) => pts[i][0] - pts[j][0] || pts[i][1] - pts[j][1]);
++  const cross = (i: number, j: number, k: number) =>
++    (pts[j][0] - pts[i][0]) * (pts[k][1] - pts[i][1]) - (pts[j][1] - pts[i][1]) * (pts[k][0] - pts[i][0]);
++  const lower: number[] = [];
++  for (const i of idx) {
++    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], i) <= 0) lower.pop();
++    lower.push(i);
++  }
++  const upper: number[] = [];
++  for (let p = idx.length - 1; p >= 0; p--) {
++    const i = idx[p];
++    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], i) <= 0) upper.pop();
++    upper.push(i);
++  }
++  upper.pop(); lower.pop();
++  return lower.concat(upper);
++}
++
++export function isHullEdge(hull: number[], u: number, v: number): boolean {
++  for (let i = 0; i < hull.length; i++) {
++    const j = (i + 1) % hull.length;
++    if ((hull[i] === u && hull[j] === v) || (hull[i] === v && hull[j] === u)) return true;
++  }
++  return false;
++}
+
+diff --git a/tests/triangulation.test.ts b/tests/triangulation.test.ts
+--- a/tests/triangulation.test.ts
++++ b/tests/triangulation.test.ts
+@@ -3,14 +3,14 @@
+-import { describe, test, expect } from 'vitest';
+-import { generateTriangulation, Point } from './src/triangulation';
++import { describe, test, expect } from 'vitest';
++import { generateTriangulation, Point } from './src/triangulation';
+@@
+-    const pointsA: Point[] = [
+-      { x: 0, y: 0 },
+-      { x: 1, y: 0 },
+-      { x: 0, y: 1 },
+-      { x: 1, y: 1 },
+-      { x: 0.5, y: 0.5 }
+-    ];
+-
+-    const pointsB: Point[] = pointsA.map(p => ({ x: p.x + 1, y: p.y + 1 }));
++    const pointsA: Point[] = [
++      [0, 0], [1, 0], [0, 1], [1, 1], [0.5, 0.5]
++    ];
++
++    const pointsB: Point[] = pointsA.map(([x, y]) => [x + 1, y + 1]);
+@@
+-      tri.forEach(index => {
+-        expect(index).toBeGreaterThanOrEqual(0);
+-        expect(index).toBeLessThan(pointsA.length);
+-

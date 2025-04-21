@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { Point } from '../types';
 
-  const { points, triangles, selectedIndex, pointselect, pointmove } = $props<{
-    points: { x: number; y: number }[];
-    triangles?: number[][] | null;
-    selectedIndex?: number | null;
-    pointselect?: (index: number | null) => void;
-    pointmove?: (detail: { index: number; point: { x: number; y: number } }) => void;
-  }>();
+  const { points = [], triangles = [], selectedIndex = -1, pointselect, pointmove } = $props<{
+      points?: Array<{ x: number; y: number }>;
+      triangles?: number[][] | null;
+      selectedIndex?: number;
+      pointselect?: (index: number | null) => void;
+      pointmove?: (detail: { index: number; point: { x: number; y: number } }) => void;
+    }>();
 
   let canvas: HTMLCanvasElement;
   const POINT_SIZE = 12;
@@ -35,7 +35,7 @@
   function updateCanvas() {
     normPoints = normalizePoints(points);
     draw();
-    console.log('Canvas updated:', normPoints);
+    //console.log('Canvas updated:', normPoints);
   }
 
   function draw() {
@@ -75,29 +75,29 @@
   function handleMouseDown(e: MouseEvent) {
     const { mouseX, mouseY } = getMousePosition(e);
     dragIdx = normPoints.findIndex(p => Math.hypot(p.x - mouseX, p.y - mouseY) < 0.02);
-    console.log('MouseDown fired. DragIdx:', dragIdx);
+    //console.log('MouseDown fired. DragIdx:', dragIdx);
 
     if (dragIdx !== -1) {
       pointselect?.(dragIdx);
-      console.log('Point selected:', dragIdx);
+      //console.log('Point selected:', dragIdx);
       if (!triangles || triangles.length === 0) {
         dragging = true;
-        console.log('Dragging enabled.');
+        //console.log('Dragging enabled.');
       } else {
         dragging = false;
-        console.log('Dragging disabled due to triangles shown.');
+        //console.log('Dragging disabled due to triangles shown.');
       }
       draw();
     } else {
       pointselect?.(null);
-      console.log('Selection cleared');
+      //console.log('Selection cleared');
       draw();
     }
   }
 
   function handleMouseMove(e: MouseEvent) {
     if (!dragging || dragIdx === null) return;
-    console.log('MouseMove fired.');
+    //console.log('MouseMove fired.');
 
     const { mouseX, mouseY } = getMousePosition(e);
 
@@ -113,13 +113,13 @@
     const realY = minY - (maxSize - height)/2 - margin + mouseY * (maxSize + margin*2);
 
     pointmove?.({ index: dragIdx, point: { x: realX, y: realY } });
-    console.log('Point moved:', dragIdx, realX, realY);
+    //console.log('Point moved:', dragIdx, realX, realY);
   }
 
   function handleMouseUp() {
     dragging = false;
     dragIdx = null;
-    console.log('MouseUp fired. Dragging ended.');
+    //console.log('MouseUp fired. Dragging ended.');
   }
 </script>
 
