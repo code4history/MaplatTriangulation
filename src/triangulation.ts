@@ -1,33 +1,21 @@
 import Delaunator from 'delaunator';
+import { enforceRequiredEdges } from './constraint/required';
+import { removeForbiddenEdges } from './constraint/forbidden';
+import { validateConstraints, checkFinalConstraints } from './constraint/validate';
+import { Point } from './types';
 
-/** 内部表現はタプルに統一 */
-export type Point = [number, number];
-
-export interface TriangulationResult {
-  triangles: number[][];
-  pointsA: Point[];
-  pointsB: Point[];
+export interface ConstraintOpts {
+  requiredEdges?: [number, number][];
+  forbiddenEdges?: [number, number][];
 }
+export interface Triangulation { triangles: Uint32Array; points: Point[]; }
 
-/**
- * 2 平面対応を後工程で扱う前段フェーズ：
- * まだ必須／禁止制約を入れる前のプレーンな Delaunay 生成
- */
-export function generateTriangulation(pointsA: Point[], pointsB: Point[]): TriangulationResult {
-  if (pointsA.length !== pointsB.length) {
-    throw new Error('対応点の数が異なります。');
-  }
-
-  const delaunay = Delaunator.from(pointsA);
-
-  const triangles: number[][] = [];
-  for (let i = 0; i < delaunay.triangles.length; i += 3) {
-    triangles.push([
-      delaunay.triangles[i],
-      delaunay.triangles[i + 1],
-      delaunay.triangles[i + 2]
-    ]);
-  }
-
-  return { triangles, pointsA, pointsB };
+export function triangulate(points: Point[], opts: ConstraintOpts = {}): Triangulation {
+  validateConstraints(points, opts.requiredEdges??[], opts.forbiddenEdges??[]);
+  const delaunay = Delaunator.from(points);
+  let triangles = new Uint32Array(delaunay.triangles);
+  if(opts.requiredEdges?.length) triangles = enforceRequiredEdges(triangles, opts.requiredEdges);
+  if(opts.forbiddenEdges?.length) triangles = removeForbiddenEdges(triangles, opts.forbiddenEdges, opts.requiredEdges??[]);
+  checkFinalConstraints(triangles, opts.requiredEdges??[], opts.forbiddenEdges??[]);
+  return { triangles, points };
 }

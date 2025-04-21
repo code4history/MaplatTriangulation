@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { detectTopologyErrors } from '../src/topology';
-import { generateTriangulation, TriangulationResult } from '../src/triangulation';
+import { triangulate } from '../src/triangulation';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -17,7 +17,12 @@ files.forEach(file => {
 
   describe(`Generated Data Test: ${title || file}`, () => {
     test('should generate triangulation without topology errors', () => {
-      const result: TriangulationResult = generateTriangulation(pointsA, pointsB);
+      const flat = triangulate(pointsA).triangles;
+      const triplets: number[][] = [];
+      for (let i = 0; i < flat.length; i += 3) {
+        triplets.push([flat[i], flat[i+1], flat[i+2]]);
+      }
+      const result = { triangles: triplets, pointsA, pointsB };
       const errors = detectTopologyErrors(result);
 
       expect(errors.length).toBe(0);

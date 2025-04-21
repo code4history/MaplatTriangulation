@@ -33,3 +33,27 @@ export function flipEdge(tris: Uint32Array, u: number, v: number): boolean {
   tris[off2]     = opp1; tris[off2 + 1] = opp2; tris[off2 + 2] = v;
   return true;
 }
+
+export function locateEdge(tris: Uint32Array, u: number, v: number): number[] {
+  const adj: Map<number, number[]> = new Map();
+  for (let i=0;i<tris.length;i+=3){
+    const a=tris[i],b=tris[i+1],c=tris[i+2];
+    [[a,b],[b,c],[c,a]].forEach(([p,q])=>{
+      (adj.get(p)??adj.set(p,[]).get(p)!).push(q);
+      (adj.get(q)??adj.set(q,[]).get(q)!).push(p);
+    });
+  }
+  const queue=[u];
+  const prev: Map<number,number>=new Map();
+  prev.set(u,-1);
+  while(queue.length){
+    const cur=queue.shift()!;
+    if(cur===v) break;
+    for(const nxt of adj.get(cur)??[]){
+      if(!prev.has(nxt)) { prev.set(nxt,cur); queue.push(nxt);} }
+  }
+  if(!prev.has(v)) throw new Error(`Cannot route required edge ${u}-${v}`);
+  const path:number[]=[]; let cur=v;
+  while(cur!==-1){ path.push(cur); cur=prev.get(cur)!; }
+  return path.reverse();
+}

@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import { generateTriangulation, Point } from '../src/triangulation';
+import { Point } from './types';
+import { triangulate } from '../src/triangulation';
 
 describe('Delaunay Triangulation', () => {
   test('should generate triangles correctly', () => {
@@ -8,15 +9,16 @@ describe('Delaunay Triangulation', () => {
     ];
     const pointsB: Point[] = pointsA.map(([x, y]) => [x + 1, y + 1]);
 
-    const result = generateTriangulation(pointsA, pointsB);
+    const { triangles } = triangulate(pointsA);
 
-    expect(result.triangles.length).toBeGreaterThan(0);
-    result.triangles.forEach(tri => {
-      expect(tri.length).toBe(3);
-      tri.forEach(idx => {
-        expect(idx).toBeGreaterThanOrEqual(0);
-        expect(idx).toBeLessThan(pointsA.length);
-      });
-    });
+    // 3 の倍数長であること
+    expect(triangles.length % 3).toBe(0);
+    expect(triangles.length).toBeGreaterThan(0);
+
+    // 各頂点インデックスの範囲をチェック
+    for (let i = 0; i < triangles.length; i++) {
+      expect(triangles[i]).toBeGreaterThanOrEqual(0);
+      expect(triangles[i]).toBeLessThan(pointsA.length);
+    }
   });
 });
