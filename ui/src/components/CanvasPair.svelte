@@ -4,7 +4,7 @@
   import PointDataEditor from './PointDataEditor.svelte';
   import ControlForm from './ControlForm.svelte';
   import { generatePoints } from '../utils/pointUtils';
-  import { generateTriangulation } from '../../../src/triangulation';
+  import { triangulate } from '../../../src/triangulation';
 
   let pointPairs = $state(generatePoints(500));
   let triangles = $state<number[][] | null>(null);
@@ -59,11 +59,13 @@
   // 三角網トグル
   const toggleTriangulation = () => {
     if (!isTriangulationShown) {
-      const result = generateTriangulation(
-        pointPairs.map(p => p.a),
-        pointPairs.map(p => p.b)
-      );
-      triangles = result.triangles;
+      const pointsA = pointPairs.map(p => p.a);
+      const triangles_ = triangulate(pointsA).triangles;
+      const triTriplets = [];
+      for (let i = 0; i < triangles_.length; i += 3) {
+        triTriplets.push([triangles_[i], triangles_[i + 1], triangles_[i + 2]]);
+      }
+      triangles = triTriplets;
       isTriangulationShown = true;
     } else {
       triangles = null;

@@ -1,8 +1,4 @@
-// 点データ構造
-export interface Point {
-  x: number;
-  y: number;
-}
+import type { Point } from '../../src/types';
 
 // 対応点セットのデータ構造
 export interface PointPair {
